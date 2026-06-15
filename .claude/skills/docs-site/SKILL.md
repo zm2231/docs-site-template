@@ -18,12 +18,12 @@ Static docs on Cloudflare. Push to `main` → GitHub Actions runs
 
 The site runs one `AUTH_MODE` (set in `wrangler.toml`):
 
-- **`site`** — one shared login gates everything. Secrets: `SITE_USER`,
+- **`site`**, one shared login gates everything. Secrets: `SITE_USER`,
   `SITE_PASS`, `SESSION_SECRET`.
-- **`per-doc`** — gated index (`INDEX_PASSWORD`) plus a per-document password in
+- **`per-doc`**, gated index (`INDEX_PASSWORD`) plus a per-document password in
   KV. Each client unlocks only their path. Set a doc password with
   `sh scripts/setup.sh set-doc-password <slug> '<password>'`.
-- **`none`** — Worker passthrough. Public, or gate upstream with Cloudflare
+- **`none`**, Worker passthrough. Public, or gate upstream with Cloudflare
   Access for SSO/email identity.
 
 All modes support Turnstile on the login and KV-backed IP rate limiting.

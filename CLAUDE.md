@@ -6,11 +6,11 @@ A gated docs site on Cloudflare. Static assets in `public/`, served by a Worker
 
 ## Access models (`AUTH_MODE` in wrangler.toml)
 
-- `site` — one shared login (`SITE_USER`/`SITE_PASS`) gates every URL.
-- `per-doc` — gated index (`INDEX_PASSWORD`) plus a per-document password in KV
+- `site`, one shared login (`SITE_USER`/`SITE_PASS`) gates every URL.
+- `per-doc`, gated index (`INDEX_PASSWORD`) plus a per-document password in KV
   (`pw:<slug>`); each client unlocks only their own path. Fails closed if
   `INDEX_PASSWORD` is unset.
-- `none` — Worker passthrough; gate upstream with Cloudflare Access, or leave
+- `none`, Worker passthrough; gate upstream with Cloudflare Access, or leave
   public.
 
 All modes share an HMAC session cookie, optional Turnstile, and KV rate limiting.
@@ -25,7 +25,7 @@ sh .githooks/install.sh
 Activates the git hooks. Requires `python3`. Without it your pushes are not gated
 and you can ship a stale index.
 
-## The index page is generated — never hand-edit it
+## The index page is generated, never hand-edit it
 
 `public/index.html` is built by `scripts/build_index.py` from git history
 (date-added, author) and a `_meta.json` in each doc folder (`title`, `desc`,
