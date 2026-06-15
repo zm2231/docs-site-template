@@ -260,12 +260,12 @@ export default {
       return new Response(`Auth not configured: unknown AUTH_MODE "${mode}".`, { status: 503 });
     }
 
-    if (mode === "none") {
-      return securityHeaders(await env.ASSETS.fetch(request));
-    }
-
     if (!isCanonicalPath(rawRequestPath(request.url))) {
       return new Response("Bad request", { status: 400, headers: { "cache-control": "no-store" } });
+    }
+
+    if (mode === "none") {
+      return securityHeaders(await env.ASSETS.fetch(request));
     }
 
     const sessionSecret = env.SESSION_SECRET ?? "";
