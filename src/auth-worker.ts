@@ -147,8 +147,16 @@ function escapeHtml(s: string): string {
 }
 
 function safeRedirect(target: string): string {
-  if (!target || !target.startsWith("/") || target.startsWith("//")) return "/";
+  if (!target || target[0] !== "/") return "/";
+  if (target[1] === "/" || target[1] === "\\") return "/";
+  if (/[\x00-\x1f\\]/.test(target)) return "/";
   return target;
+}
+
+function isCanonicalPath(pathname: string): boolean {
+  if (/%2f|%5c/i.test(pathname)) return false;
+  if (pathname.includes("\\")) return false;
+  return !pathname.split("/").some((seg) => seg === ".." || seg === "%2e%2e");
 }
 
 function loginPage(opts: {
@@ -237,8 +245,16 @@ export default {
     const mode = env.AUTH_MODE ?? "site";
     const title = env.SITE_TITLE ?? "Protected documents";
 
+    if (mode !== "none" && mode !== "site" && mode !== "per-doc") {
+      return new Response(`Auth not configured: unknown AUTH_MODE "${mode}".`, { status: 503 });
+    }
+
     if (mode === "none") {
       return securityHeaders(await env.ASSETS.fetch(request));
+    }
+
+    if (!isCanonicalPath(url.pathname)) {
+      return new Response("Bad request", { status: 400, headers: { "cache-control": "no-store" } });
     }
 
     const sessionSecret = env.SESSION_SECRET ?? "";

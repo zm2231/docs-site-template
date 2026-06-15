@@ -10,6 +10,13 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "docs-site: python3 not found — index not regenerated (pre-push will block a stale index)" >&2
   exit 0
 fi
+partial="$( { git diff --name-only -- public/ ':!public/index.html'; git diff --cached --name-only -- public/ ':!public/index.html'; } | sort | uniq -d )"
+if [ -n "$partial" ]; then
+  echo "docs-site: these public/ inputs are partially staged; the index would be generated from content not in the commit:" >&2
+  echo "$partial" >&2
+  echo "Run 'git add' on them (or stash the unstaged edits) and commit again." >&2
+  exit 1
+fi
 python3 "$BUILD" >/dev/null || { echo "docs-site: index build failed — see errors above" >&2; exit 1; }
 INDEX="$ROOT/public/index.html"
 if ! git diff --quiet -- "$INDEX"; then
