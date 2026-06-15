@@ -54,11 +54,22 @@ Both run on Cloudflare. The repo ships **no active workflow** on purpose, so a
 fresh clone never has a red CI run failing for a token it doesn't have yet.
 
 **Cloudflare native Git (the default).** Connect the repo once in the Cloudflare
-dashboard (Workers and Pages, your Worker, Settings, Build, Connect), set the
-deploy command to `npx wrangler deploy`, and Cloudflare builds and ships on every
-push. No workflow file, no repo secret, no token to rotate. Your freshness gate
-is the local `pre-push` hook, which blocks a stale index before the push leaves
-your machine.
+dashboard (Workers and Pages → your Worker → Settings → Build → Connect), with:
+
+| Workers Builds setting | Value |
+|---|---|
+| Root directory | `/` |
+| Build command | `npm ci` |
+| Deploy command | `npx wrangler deploy` |
+| Build watch paths | `*` (rebuild on any push; see note) |
+
+No workflow file, no repo secret, no token to rotate. Cloudflare auto-creates the
+build token. The build only installs deps and runs `wrangler deploy`; it does
+**not** regenerate the index. The index is already fresh in the commit, because
+the local `pre-push` hook rebuilds and blocks a stale one before the push leaves
+your machine, so Cloudflare just deploys what you pushed. (Build watch paths are
+evaluated relative to the repo root, not the root-directory setting; `*` is right
+for this single-worker repo so every content push deploys.)
 
 **GitHub Actions (opt-in).** If you'd rather GitHub run the deploy and the
 freshness check in CI, move the example workflow into place and add the token:

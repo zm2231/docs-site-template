@@ -103,9 +103,12 @@ git add -A && git commit -m "Initial site"
 
 - **Cloudflare native Git (default):** `npx wrangler deploy` once to create the
   Worker, then `gh repo create <account>/<slug> --private --source . --push`, then
-  in the dashboard connect the repo to the Worker (Settings → Build → Connect),
-  deploy command `npx wrangler deploy`. Subsequent pushes deploy themselves. No
-  repo secret, nothing to fail.
+  in the dashboard connect the repo to the Worker (Settings → Build → Connect)
+  with: Root directory `/`, Build command `npm ci`, Deploy command
+  `npx wrangler deploy`, Build watch paths `*`. Cloudflare auto-creates the build
+  token. Subsequent pushes deploy themselves; no repo secret, nothing to fail.
+  The build does NOT run `build_index.py` — the index is committed fresh by the
+  pre-push hook, so Cloudflare only deploys (no python needed in the CF build).
 - **GitHub Actions (opt-in):** enable the inert example first, then create the
   repo and token:
   ```bash
