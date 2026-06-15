@@ -165,9 +165,16 @@ function rawRequestPath(requestUrl: string): string {
 }
 
 function isCanonicalPath(rawPath: string): boolean {
-  if (/%2e%2e|%2f|%5c/i.test(rawPath)) return false;
+  if (/%2f|%5c/i.test(rawPath)) return false;
   if (rawPath.includes("\\")) return false;
-  return !rawPath.split("/").some((seg) => seg === "..");
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch {
+    return false;
+  }
+  if (decoded.includes("\\")) return false;
+  return !decoded.split("/").some((seg) => seg === "..");
 }
 
 function loginPage(opts: {
