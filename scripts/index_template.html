@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>__HEADING__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f141d; --surface:#181f2c; --border:rgba(180,200,230,.10);
+    --ink:#d8dfeb; --ink-soft:#aeb8c9; --ink-dim:#7d8a9e; --amber:#d6892f; --radius:4px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f3f1ec; --surface:#fbfaf6; --border:rgba(46,64,90,.14);
+      --ink:#1f2c40; --ink-soft:#3a4a64; --ink-dim:#6a7891; --amber:#a85a14;
+    }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:15px; line-height:1.6; padding:64px 32px; min-height:100vh; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:720px; margin:0 auto; }
+  .stamp { display:inline-flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:2.4px; color:var(--amber); padding:6px 12px; border:1px solid var(--amber); border-radius:2px; margin-bottom:32px; }
+  .stamp::before { content:''; width:6px; height:6px; background:var(--amber); border-radius:50%; }
+  h1 { font-size:36px; font-weight:600; letter-spacing:-.4px; margin-bottom:14px; }
+  .sub { color:var(--ink-soft); max-width:600px; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; margin-top:28px; }
+  .chip { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; color:var(--ink-dim); background:transparent; border:1px solid var(--border); border-radius:99px; padding:5px 12px; cursor:pointer; transition:.14s ease; }
+  .chip i { font-style:normal; color:var(--border); margin-left:3px; }
+  .chip:hover { border-color:var(--ink-dim); color:var(--ink); }
+  .chip.is-active { background:var(--ink); border-color:var(--ink); color:var(--bg); }
+  .month { margin-top:40px; }
+  .month.is-hidden, .row.is-hidden { display:none; }
+  .month-head { display:flex; align-items:baseline; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--ink-dim); padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+  .month-head .count { color:var(--border); }
+  .row { display:flex; gap:24px; justify-content:space-between; align-items:baseline; text-decoration:none; color:inherit; padding:16px 14px; margin:0 -14px; border-radius:var(--radius); border-left:2px solid transparent; transition:.14s ease; }
+  .row:hover { background:var(--surface); border-left-color:var(--amber); }
+  .row-main { min-width:0; }
+  .row h3 { font-size:16px; font-weight:500; margin:0; }
+  .row:hover h3 { color:var(--amber); }
+  .desc { color:var(--ink-dim); font-size:13px; margin:4px 0 0; line-height:1.45; }
+  .row-meta { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-dim); white-space:nowrap; flex-shrink:0; text-transform:uppercase; letter-spacing:1px; padding-top:2px; }
+  .by { color:var(--ink-soft); }
+  .pill { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); border-radius:2px; padding:1px 5px; margin-left:8px; vertical-align:middle; }
+  footer { margin-top:80px; padding-top:24px; border-top:1px solid var(--border); color:var(--ink-dim); font-size:12px; font-family:'IBM Plex Mono',monospace; letter-spacing:.4px; }
+  @media (max-width:560px) {
+    h1 { font-size:28px; }
+    .row { flex-direction:column; gap:6px; }
+    .row-meta { order:-1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stamp">__STAMP__</div>
+  <h1>__HEADING__</h1>
+  <p class="sub">__SUB__</p>
+__FILTERS__
+__BODY__
+  <footer>__FOOTER__ · __COUNT__ documents</footer>
+</div>
+<script>
+  const chips = document.querySelectorAll('.chip');
+  chips.forEach(c => c.addEventListener('click', () => {
+    const tag = c.dataset.tag;
+    chips.forEach(x => x.classList.toggle('is-active', x === c));
+    document.querySelectorAll('.row').forEach(r => {
+      const tags = (r.dataset.tags || '').split(' ');
+      r.classList.toggle('is-hidden', tag && !tags.includes(tag));
+    });
+    document.querySelectorAll('.month').forEach(m => {
+      const visible = m.querySelectorAll('.row:not(.is-hidden)').length;
+      m.classList.toggle('is-hidden', visible === 0);
+      const n = m.querySelector('.count');
+      if (n) n.textContent = visible;
+    });
+  }));
+</script>
+</body>
+</html>

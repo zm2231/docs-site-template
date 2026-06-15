@@ -1,0 +1,23 @@
+#!/bin/sh
+ROOT="$(git rev-parse --show-toplevel)"
+"$ROOT/.githooks/run-parent" pre-commit "$@" || exit $?
+BUILD="$ROOT/scripts/build_index.py"
+[ -f "$BUILD" ] || exit 0
+if ! git diff --cached --name-only | grep -qE '^public/'; then
+  exit 0
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "docs-site: python3 not found — index not regenerated (pre-push will block a stale index)" >&2
+  exit 0
+fi
+python3 "$BUILD" >/dev/null || { echo "docs-site: index build failed — see errors above" >&2; exit 1; }
+INDEX="$ROOT/public/index.html"
+if ! git diff --quiet -- "$INDEX"; then
+  if git diff --cached --quiet -- "$INDEX"; then
+    git add -- "$INDEX"
+  else
+    echo "docs-site: $INDEX is partially staged and the regenerated version differs." >&2
+    echo "Run 'git add $INDEX' (or 'git checkout -- $INDEX' to discard) and commit again." >&2
+    exit 1
+  fi
+fi

@@ -1,0 +1,18 @@
+#!/bin/sh
+ROOT="$(git rev-parse --show-toplevel)"
+"$ROOT/.githooks/run-parent" pre-push "$@" || exit $?
+BUILD="$ROOT/scripts/build_index.py"
+if [ ! -f "$BUILD" ]; then
+  echo "docs-site: build_index.py missing at $BUILD — cannot validate the index. Restore it before pushing." >&2
+  exit 1
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "docs-site: python3 required to validate the index before push" >&2
+  exit 1
+fi
+if ! python3 "$BUILD" --check; then
+  echo "" >&2
+  echo "docs-site: index validation failed (see ERROR lines above)." >&2
+  echo "Fix the tags / run build_index.py, commit the regenerated index, then push again." >&2
+  exit 1
+fi

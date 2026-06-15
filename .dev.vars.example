@@ -1,0 +1,5 @@
+SESSION_SECRET=dev-only-change-me
+SITE_USER=docs
+SITE_PASS=dev-password
+INDEX_PASSWORD=dev-index-password
+TURNSTILE_SECRET_KEY=

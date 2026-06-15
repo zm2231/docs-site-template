@@ -1,0 +1,6 @@
+{
+  "stamp": "protected",
+  "heading": "Documents",
+  "sub": "Shared documents, gated by a Cloudflare Worker.",
+  "footer": "docs · cloudflare worker"
+}
