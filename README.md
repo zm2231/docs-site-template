@@ -101,11 +101,16 @@ It checks the index is fresh, then runs `wrangler deploy` on every push to
    npx wrangler secret put SITE_PASS
    ```
 
-4. For `per-doc` mode, create the KV namespace, paste its id into `wrangler.toml`
-   under a `[[kv_namespaces]]` block with `binding = "AUTH_KV"`, then set the
-   index password and any per-client passwords:
+4. For `per-doc` mode, create the KV namespace and **add** this block to
+   `wrangler.toml` (the default config ships without it):
+   ```toml
+   [[kv_namespaces]]
+   binding = "AUTH_KV"
+   id = "<the-id-from-setup.sh-kv>"
+   ```
+   then set the index password and any per-client passwords:
    ```bash
-   sh scripts/setup.sh kv          # prints the namespace id; paste it first
+   sh scripts/setup.sh kv          # prints the namespace id; add the block first
    npx wrangler secret put INDEX_PASSWORD
    sh scripts/setup.sh set-doc-password acme-deck 'their-password'
    ```

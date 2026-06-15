@@ -39,6 +39,21 @@ Ask the user (don't guess what isn't given):
      a `CLOUDFLARE_API_TOKEN` repo secret. The repo ships the workflow inert
      under `examples/`; enable it only if chosen.
 
+## What each choice changes (and what must be done by hand)
+
+Most steps are CLI. Two things can only be done in the browser: connecting
+Cloudflare native Git, and creating Turnstile/Access. When you hit one, stop and
+hand the user the exact dashboard path; there is no `wrangler`/API command for it.
+
+| Choice | Set / change | Where | Manual dashboard step? |
+|---|---|---|---|
+| `AUTH_MODE = site` | `SITE_USER`, `SITE_PASS`, `SESSION_SECRET` | `wrangler secret put` | no |
+| `AUTH_MODE = per-doc` | `INDEX_PASSWORD`; **add** a `[[kv_namespaces]]` block; `pw:<slug>` per client | `wrangler.toml` + `setup.sh` | no |
+| `AUTH_MODE = none` | nothing to gate (public). For SSO, add a Cloudflare Access app | Zero Trust dashboard | yes (Access only) |
+| Turnstile on | `TURNSTILE_SITE_KEY` in `[vars]`, `TURNSTILE_SECRET_KEY` secret | `wrangler.toml` + dashboard | yes (create the widget) |
+| Deploy = CF native (default) | connect repo → Worker (root `/`, build `npm ci`, deploy `npx wrangler deploy`, watch `*`) | CF dashboard | **yes — dashboard-only, no CLI** |
+| Deploy = GitHub Actions | move `examples/` workflow into `.github/workflows/`; set `CLOUDFLARE_API_TOKEN` | CLI (`gh`) | token creation only |
+
 ## Step 2 — Clone the template
 
 If you are NOT already inside a docs-site-template checkout, clone a fresh one:
@@ -72,14 +87,26 @@ npx wrangler login        # browser OAuth; no token to handle for manual deploys
 
 - Always: `sh scripts/setup.sh secrets` (generates + sets `SESSION_SECRET`).
 - `site` mode: `npx wrangler secret put SITE_USER` and `SITE_PASS`.
-- `per-doc` mode: `sh scripts/setup.sh kv`, paste the printed id into
-  `wrangler.toml` under a `[[kv_namespaces]]` block with `binding = "AUTH_KV"`,
-  then `npx wrangler secret put INDEX_PASSWORD`, then one
-  `sh scripts/setup.sh set-doc-password <slug> '<pw>'` per client folder.
-  (The namespace must be in `wrangler.toml` before set-doc-password works.)
-- Optional Turnstile: create a widget in the Cloudflare dashboard (Turnstile →
-  Add site), put the site key in `wrangler.toml [vars]` as `TURNSTILE_SITE_KEY`,
-  and run `npx wrangler secret put TURNSTILE_SECRET_KEY`.
+- `none` mode: no secrets to gate. If the user wants SSO (not a shared password),
+  that's a Cloudflare Access app on the hostname, set up in the Zero Trust
+  dashboard (manual). Otherwise `none` is just public.
+- `per-doc` mode:
+  1. `sh scripts/setup.sh kv` prints a namespace id.
+  2. The default `wrangler.toml` has NO kv block, so **add** one (it isn't there
+     to paste under):
+     ```toml
+     [[kv_namespaces]]
+     binding = "AUTH_KV"
+     id = "<the-id-from-step-1>"
+     ```
+  3. `npx wrangler secret put INDEX_PASSWORD` (gates the index).
+  4. One `sh scripts/setup.sh set-doc-password <slug> '<pw>'` per client folder
+     (needs the kv block in place first).
+  KV also backs the IP rate-limit in every mode, so add the same block for `site`
+  or `none` if you want the lockout.
+- Optional Turnstile (a manual dashboard step): create a widget in the Cloudflare
+  dashboard (Turnstile → Add site), put the site key in `wrangler.toml [vars]` as
+  `TURNSTILE_SITE_KEY`, and run `npx wrangler secret put TURNSTILE_SECRET_KEY`.
 
 ## Step 5 — Add the user's first docs (any stack)
 
@@ -101,14 +128,18 @@ sh .githooks/install.sh
 git add -A && git commit -m "Initial site"
 ```
 
-- **Cloudflare native Git (default):** `npx wrangler deploy` once to create the
-  Worker, then `gh repo create <account>/<slug> --private --source . --push`, then
-  in the dashboard connect the repo to the Worker (Settings → Build → Connect)
-  with: Root directory `/`, Build command `npm ci`, Deploy command
-  `npx wrangler deploy`, Build watch paths `*`. Cloudflare auto-creates the build
-  token. Subsequent pushes deploy themselves; no repo secret, nothing to fail.
-  The build does NOT run `build_index.py` — the index is committed fresh by the
-  pre-push hook, so Cloudflare only deploys (no python needed in the CF build).
+- **Cloudflare native Git (default):**
+  1. `npx wrangler deploy` once (creates the Worker; you can do this).
+  2. `gh repo create <account>/<slug> --private --source . --push`.
+  3. **Connecting the repo to the Worker is dashboard-only — there is no
+     `wrangler`/API command for it. Do NOT hunt for one. Hand the user these exact
+     steps** and wait for them to confirm: Cloudflare dashboard → Workers and
+     Pages → the Worker → Settings → Build → Connect, then set Root directory `/`,
+     Build command `npm ci`, Deploy command `npx wrangler deploy`, Build watch
+     paths `*`. Cloudflare auto-creates the build token.
+  After that, pushes deploy themselves; no repo secret, nothing to fail. The build
+  does NOT run `build_index.py`; the index is committed fresh by the pre-push hook,
+  so Cloudflare only deploys (no python needed in the CF build).
 - **GitHub Actions (opt-in):** enable the inert example first, then create the
   repo and token:
   ```bash

@@ -36,15 +36,26 @@ All modes support Turnstile on the login and KV-backed IP rate limiting.
    `SITE_TITLE` under `[vars]`.
 2. `npm install` then `npx wrangler login`.
 3. `sh scripts/setup.sh secrets` (sets `SESSION_SECRET`), then the secrets for
-   your mode (`SITE_USER`/`SITE_PASS`, or `INDEX_PASSWORD` + `sh scripts/setup.sh kv`).
+   your mode:
+   - `site`: `npx wrangler secret put SITE_USER` and `SITE_PASS`.
+   - `per-doc`: `sh scripts/setup.sh kv`, then **add** a kv block to
+     `wrangler.toml` (it isn't there by default):
+     ```toml
+     [[kv_namespaces]]
+     binding = "AUTH_KV"
+     id = "<the-printed-id>"
+     ```
+     then `npx wrangler secret put INDEX_PASSWORD` and one
+     `sh scripts/setup.sh set-doc-password <slug> '<pw>'` per client.
+   - `none`: nothing; for SSO add a Cloudflare Access app (Zero Trust dashboard).
 4. `sh .githooks/install.sh`.
-5. Deploy. Default is Cloudflare native Git: `npx wrangler deploy` once to create
-   the Worker, then connect the repo to it in the dashboard (Settings → Build →
-   Connect) with Root directory `/`, Build command `npm ci`, Deploy command
-   `npx wrangler deploy`, Build watch paths `*`. Pushes then deploy themselves; no
-   repo secret, nothing to fail. The CF build does not regenerate the index (the
+5. Deploy. Default is Cloudflare native Git: run `npx wrangler deploy` once to
+   create the Worker. Connecting the repo for auto-deploy is **dashboard-only**
+   (no CLI exists); hand the user this path: dashboard → Workers and Pages → the
+   Worker → Settings → Build → Connect, with Root directory `/`, Build command
+   `npm ci`, Deploy command `npx wrangler deploy`, Build watch paths `*`. Pushes
+   then deploy themselves. The CF build does not regenerate the index (the
    pre-push hook keeps the committed one fresh). To use GitHub Actions instead,
-   move the inert example into place and add the token:
    `mkdir -p .github/workflows && mv examples/github-actions-deploy.yml .github/workflows/deploy.yml`,
    then `gh secret set CLOUDFLARE_API_TOKEN` (prompts, stays out of history). See README.
 6. **Install the per-site skill** so "share this" works going forward:
