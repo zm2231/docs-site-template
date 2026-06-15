@@ -41,6 +41,12 @@ docs. A folder with no KV password falls back to `INDEX_PASSWORD`, so nothing is
 ever served ungated. If `INDEX_PASSWORD` is unset, the Worker returns 503 rather
 than open the site, so a misconfiguration fails closed.
 
+Per-doc passwords are **folder-scoped**: a client deliverable is a folder
+(`public/acme-deck/`), and its password gates everything under that path. A
+root-level file (`public/note.html`, and any shared asset like `/logo.png`) maps
+to the index gate, so the index page can load its own assets after the index
+password. Put anything a client should unlock on its own in a folder.
+
 ### `none` mode
 
 The Worker adds security headers and serves the assets. Reach for this when the

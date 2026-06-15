@@ -55,6 +55,10 @@ sh scripts/setup.sh set-doc-password acme-deck 'client-password'
 Give the client `https://<domain>/acme-deck/` plus that password. They unlock
 only that path. Remove later with `rm-doc-password acme-deck`.
 
+Per-doc passwords are folder-scoped. A client deliverable must be a folder
+(`public/acme-deck/`). A root-level `.html` file is gated by the index password,
+not its own, so it can't be handed to a client on a separate password.
+
 ## First-time setup
 
 See `README.md`. In short: replace the `replace-*` placeholders in
