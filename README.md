@@ -19,7 +19,7 @@ from live.
 | `public/` | your docs, plus a generated `index.html` you never edit |
 | `scripts/build_index.py` | builds the index from git (date, author) and each doc's `_meta.json` |
 | `.githooks/` | regenerate the index on commit, block a stale or off-vocab one on push |
-| `.github/workflows/` | one deploy path (the other is Cloudflare's own, below) |
+| `examples/` | an opt-in GitHub Actions workflow (default deploy is Cloudflare's own) |
 
 ## Pick a lock: `AUTH_MODE`
 
@@ -50,22 +50,27 @@ misconfiguration fails shut.
 
 ## Two ways to deploy. Pick one.
 
-The repo ships a GitHub Actions workflow, but Cloudflare can run the deploy
-itself. Both work. You run one, not both.
+Both run on Cloudflare. The repo ships **no active workflow** on purpose, so a
+fresh clone never has a red CI run failing for a token it doesn't have yet.
 
-**GitHub Actions (what's in the repo).** On every push to `main` it checks the
-index is fresh, then runs `wrangler deploy`. It needs a `CLOUDFLARE_API_TOKEN`
-repo secret with Workers deploy scope. Reach for this when you want the
-freshness check to run in CI, or you want a pure push-to-deploy with no
-dashboard clicks.
+**Cloudflare native Git (the default).** Connect the repo once in the Cloudflare
+dashboard (Workers and Pages, your Worker, Settings, Build, Connect), set the
+deploy command to `npx wrangler deploy`, and Cloudflare builds and ships on every
+push. No workflow file, no repo secret, no token to rotate. Your freshness gate
+is the local `pre-push` hook, which blocks a stale index before the push leaves
+your machine.
 
-**Cloudflare native Git (Workers Builds).** Connect the repo once in the
-Cloudflare dashboard (Workers and Pages, your Worker, Settings, Build, Connect),
-set the deploy command to `npx wrangler deploy`, and Cloudflare builds and ships
-on every push. No workflow file, no repo secret, no token to rotate. If you go
-this way, delete `.github/workflows/deploy.yml` so it isn't sitting there
-failing for want of a token. Your freshness gate is then the local `pre-push`
-hook, which already blocks a stale index before the push leaves your machine.
+**GitHub Actions (opt-in).** If you'd rather GitHub run the deploy and the
+freshness check in CI, move the example workflow into place and add the token:
+
+```bash
+mkdir -p .github/workflows
+mv examples/github-actions-deploy.yml .github/workflows/deploy.yml
+gh secret set CLOUDFLARE_API_TOKEN     # prompts; create it in the CF dashboard
+```
+
+It checks the index is fresh, then runs `wrangler deploy` on every push to
+`main`. Only do this if you want it; otherwise leave the example where it is.
 
 ## Setup
 
@@ -104,11 +109,13 @@ hook, which already blocks a stale index before the push leaves your machine.
    ```
    With no Turnstile keys the login still works. It just skips the captcha.
 
-6. Activate the hooks and deploy:
+6. Activate the hooks, then wire a deploy path (next section):
    ```bash
    sh .githooks/install.sh
-   git push
    ```
+   A first manual `npx wrangler deploy` creates the Worker. After that, connect
+   Cloudflare native Git (the default) or opt into GitHub Actions so pushes
+   deploy on their own.
 
 ## Adding a doc (any stack)
 
@@ -186,7 +193,7 @@ scripts/site.json         index branding
 scripts/tags.json         allowed tag vocabulary
 .claude/skills/           new-docs-site (builder) + docs-site (in-repo) skills
 .githooks/                index enforcement (install.sh once per clone)
-.github/workflows/        the GitHub Actions deploy path
+examples/                 opt-in GitHub Actions workflow (default is CF native)
 wrangler.toml             worker + assets + AUTH_MODE
 ```
 

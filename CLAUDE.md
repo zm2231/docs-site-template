@@ -1,8 +1,10 @@
 # docs-site-template
 
 A gated docs site on Cloudflare. Static assets in `public/`, served by a Worker
-(`src/auth-worker.ts`) that gates access. Push to `main` → GitHub Actions runs
-`build_index.py --check` then `wrangler deploy`.
+(`src/auth-worker.ts`) that gates access. Default deploy is Cloudflare native Git
+(Workers Builds, connected in the dashboard); a GitHub Actions workflow ships
+inert under `examples/` as an opt-in. The repo ships no active workflow, so a
+fresh clone has nothing to fail.
 
 ## Access models (`AUTH_MODE` in wrangler.toml)
 

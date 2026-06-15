@@ -38,10 +38,12 @@ All modes support Turnstile on the login and KV-backed IP rate limiting.
 3. `sh scripts/setup.sh secrets` (sets `SESSION_SECRET`), then the secrets for
    your mode (`SITE_USER`/`SITE_PASS`, or `INDEX_PASSWORD` + `sh scripts/setup.sh kv`).
 4. `sh .githooks/install.sh`.
-5. Deploy: either push to a GitHub repo with the Actions workflow (set
-   `CLOUDFLARE_API_TOKEN` via `gh secret set CLOUDFLARE_API_TOKEN`, which prompts
-   so the token stays out of shell history), or connect the repo to Cloudflare
-   native Git (Workers Builds) in the dashboard. Both deploy on push. See README.
+5. Deploy. Default is Cloudflare native Git: `npx wrangler deploy` once to create
+   the Worker, then connect the repo to it in the dashboard (Settings → Build →
+   Connect) so pushes deploy themselves. No repo secret, nothing to fail. To use
+   GitHub Actions instead, move the inert example into place and add the token:
+   `mkdir -p .github/workflows && mv examples/github-actions-deploy.yml .github/workflows/deploy.yml`,
+   then `gh secret set CLOUDFLARE_API_TOKEN` (prompts, stays out of history). See README.
 6. **Install the per-site skill** so "share this" works going forward:
    ```bash
    sh scripts/make_site_skill.sh <slug> <domain> "$(git rev-parse --show-toplevel)" <auth-mode> "<deploy-desc>"

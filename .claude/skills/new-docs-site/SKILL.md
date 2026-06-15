@@ -30,11 +30,14 @@ Ask the user (don't guess what isn't given):
    - `site` — one shared login for a single trust boundary.
    - `per-doc` — gated index plus a separate password per client folder.
    - `none` — public, or gated upstream by Cloudflare Access (SSO/identity).
-4. **Deploy path** (both are Cloudflare; pick one, never a VPS):
-   - **GitHub Actions** — push-to-deploy with a CI freshness check; needs a
-     `CLOUDFLARE_API_TOKEN` repo secret.
-   - **Cloudflare native Git (Workers Builds)** — connect the repo in the
-     Cloudflare dashboard; no workflow file, no repo secret.
+4. **Deploy path** (both are Cloudflare; pick one, never a VPS). Default to the
+   first unless the user asks for CI:
+   - **Cloudflare native Git (Workers Builds)** — the default. Connect the repo
+     in the Cloudflare dashboard; no workflow file, no repo secret, nothing to
+     fail. Freshness is enforced by the local pre-push hook.
+   - **GitHub Actions** — opt-in. Push-to-deploy with a CI freshness check; needs
+     a `CLOUDFLARE_API_TOKEN` repo secret. The repo ships the workflow inert
+     under `examples/`; enable it only if chosen.
 
 ## Step 2 — Clone the template
 
@@ -57,8 +60,8 @@ Fill `wrangler.toml`: replace `replace-worker-name` (the slug),
 `AUTH_MODE` and `SITE_TITLE` under `[vars]`.
 
 - Account id: `npx wrangler whoami` (or the Cloudflare dashboard, right sidebar).
-- If using **Cloudflare native Git**, delete the Actions workflow so it can't
-  fail for want of a token: `rm -rf .github`.
+- The repo ships no active workflow, so nothing runs (or fails) until you wire a
+  deploy path in Step 6.
 
 ## Step 4 — Auth, secrets, KV, Turnstile
 
@@ -98,15 +101,19 @@ sh .githooks/install.sh
 git add -A && git commit -m "Initial site"
 ```
 
-- **GitHub Actions path:** `gh repo create <account>/<slug> --private --source . --push`,
-  then create a token in the Cloudflare dashboard (My Profile → API Tokens →
-  Create Token → "Edit Cloudflare Workers"), and set it as a repo secret WITHOUT
-  putting it in shell history: `gh secret set CLOUDFLARE_API_TOKEN` (it prompts).
-  The push triggers the deploy.
-- **Cloudflare native Git path:** `gh repo create ... --source . --push`, then in
-  the dashboard connect the repo to the Worker (Settings → Build → Connect),
-  deploy command `npx wrangler deploy`. A first manual `npx wrangler deploy`
-  creates the Worker; connect git for subsequent pushes.
+- **Cloudflare native Git (default):** `npx wrangler deploy` once to create the
+  Worker, then `gh repo create <account>/<slug> --private --source . --push`, then
+  in the dashboard connect the repo to the Worker (Settings → Build → Connect),
+  deploy command `npx wrangler deploy`. Subsequent pushes deploy themselves. No
+  repo secret, nothing to fail.
+- **GitHub Actions (opt-in):** enable the inert example first, then create the
+  repo and token:
+  ```bash
+  mkdir -p .github/workflows && mv examples/github-actions-deploy.yml .github/workflows/deploy.yml
+  gh repo create <account>/<slug> --private --source . --push
+  gh secret set CLOUDFLARE_API_TOKEN   # prompts; create it in the CF dashboard (Edit Cloudflare Workers)
+  ```
+  The token stays out of shell history (gh prompts). The push triggers the deploy.
 
 Verify: `curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/`.
 
