@@ -153,10 +153,21 @@ function safeRedirect(target: string): string {
   return target;
 }
 
-function isCanonicalPath(pathname: string): boolean {
-  if (/%2f|%5c/i.test(pathname)) return false;
-  if (pathname.includes("\\")) return false;
-  return !pathname.split("/").some((seg) => seg === ".." || seg === "%2e%2e");
+function rawRequestPath(requestUrl: string): string {
+  const schemeEnd = requestUrl.indexOf("://");
+  const afterScheme = schemeEnd === -1 ? requestUrl : requestUrl.slice(schemeEnd + 3);
+  const slash = afterScheme.indexOf("/");
+  if (slash === -1) return "/";
+  let p = afterScheme.slice(slash);
+  const cut = p.search(/[?#]/);
+  if (cut !== -1) p = p.slice(0, cut);
+  return p;
+}
+
+function isCanonicalPath(rawPath: string): boolean {
+  if (/%2e%2e|%2f|%5c/i.test(rawPath)) return false;
+  if (rawPath.includes("\\")) return false;
+  return !rawPath.split("/").some((seg) => seg === "..");
 }
 
 function loginPage(opts: {
@@ -253,7 +264,7 @@ export default {
       return securityHeaders(await env.ASSETS.fetch(request));
     }
 
-    if (!isCanonicalPath(url.pathname)) {
+    if (!isCanonicalPath(rawRequestPath(request.url))) {
       return new Response("Bad request", { status: 400, headers: { "cache-control": "no-store" } });
     }
 
