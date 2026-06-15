@@ -14,25 +14,25 @@ compatibility: Requires wrangler auth for the Cloudflare account, python3, and t
 A gated docs site on Cloudflare. Auth mode: `__AUTH_MODE__`. Repo:
 `__REPO_PATH__`. Push to `main` auto-deploys via __DEPLOY_DESC__.
 
-## Add a doc
+## Add a doc (any stack)
 
 ```bash
 cd __REPO_PATH__
-mkdir -p public/<slug>
+sh scripts/add_doc.sh <slug> <source> ["Title"]
 ```
 
-1. Put the content at `public/<slug>/index.html` (HTML site, a Markdown viewer,
-   a PDF in an iframe, or a pre-built SPA's `dist/` contents).
-2. Add `public/<slug>/_meta.json`:
-   ```json
-   { "title": "...", "desc": "...", "confidential": false, "tags": ["Doc"] }
-   ```
-   Tags must be in `scripts/tags.json`. Add a new tag there first if needed.
-3. Rebuild the index, commit, and push:
-   ```bash
-   python3 scripts/build_index.py
-   git add -A && git commit -m "Add <slug>" && git push
-   ```
+`<source>` can be an `.html` file, a `.md` file (rendered client-side by a
+bundled markdown viewer), a `.pdf` (iframe wrapper), or a directory (a pre-built
+SPA / `dist`, served as-is). The scaffolder writes `public/<slug>/` and a
+`_meta.json` stub.
+
+Then edit `public/<slug>/_meta.json` (`title`, `desc`, `tags` from
+`scripts/tags.json`), rebuild, commit, and push:
+
+```bash
+python3 scripts/build_index.py
+git add -A && git commit -m "Add <slug>" && git push
+```
 
 The index page is generated. Never hand-edit `public/index.html`.
 

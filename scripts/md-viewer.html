@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0f141d; --surface:#181f2c; --border:rgba(180,200,230,.12); --ink:#d8dfeb; --ink-dim:#7d8a9e; --amber:#d6892f; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f3f1ec; --surface:#fbfaf6; --border:rgba(46,64,90,.14); --ink:#1f2c40; --ink-dim:#6a7891; --amber:#a85a14; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  main { max-width:760px; margin:0 auto; padding:64px 28px 120px; }
+  h1,h2,h3,h4 { line-height:1.25; margin:1.8em 0 .6em; }
+  h1 { font-size:32px; margin-top:0; }
+  h2 { font-size:24px; border-bottom:1px solid var(--border); padding-bottom:.3em; }
+  a { color:var(--amber); }
+  p,li { color:var(--ink); }
+  code { font-family:'IBM Plex Mono',monospace; font-size:.88em; background:var(--surface); padding:2px 6px; border-radius:3px; }
+  pre { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:16px; overflow:auto; }
+  pre code { background:none; padding:0; }
+  blockquote { margin:1em 0; padding:.4em 1em; border-left:3px solid var(--amber); color:var(--ink-dim); }
+  table { border-collapse:collapse; width:100%; margin:1em 0; }
+  th,td { border:1px solid var(--border); padding:8px 12px; text-align:left; }
+  img { max-width:100%; }
+  hr { border:0; border-top:1px solid var(--border); margin:2em 0; }
+  .dl { display:inline-block; margin-bottom:24px; font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-dim); text-decoration:none; border:1px solid var(--border); border-radius:4px; padding:6px 12px; }
+  .dl:hover { color:var(--amber); border-color:var(--amber); }
+</style>
+</head>
+<body>
+<main>
+  <a class="dl" href="__MD_FILE__" download>Download markdown</a>
+  <article id="doc">Loading…</article>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+  fetch('__MD_FILE__')
+    .then(r => r.ok ? r.text() : Promise.reject(r.status))
+    .then(md => {
+      const html = marked.parse(md, { gfm: true, breaks: false });
+      document.getElementById('doc').innerHTML = DOMPurify.sanitize(html);
+      const h1 = document.querySelector('#doc h1');
+      if (h1) document.title = h1.textContent;
+    })
+    .catch(() => { document.getElementById('doc').textContent = 'Could not load __MD_FILE__'; });
+</script>
+</body>
+</html>

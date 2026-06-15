@@ -77,8 +77,7 @@ hook, which already blocks a stale index before the push leaves your machine.
    npm install
    sh scripts/setup.sh secrets
    ```
-   That sets `SESSION_SECRET` and prints the rest of the secrets to set for your
-   mode.
+   That sets `SESSION_SECRET` and prints the other secrets to set.
 
 3. For `site` mode, set the login:
    ```bash
@@ -86,15 +85,17 @@ hook, which already blocks a stale index before the push leaves your machine.
    npx wrangler secret put SITE_PASS
    ```
 
-4. For `per-doc` mode, create the KV namespace and set the index password:
+4. For `per-doc` mode, create the KV namespace, paste its id into `wrangler.toml`
+   under a `[[kv_namespaces]]` block with `binding = "AUTH_KV"`, then set the
+   index password and any per-client passwords:
    ```bash
-   sh scripts/setup.sh kv          # prints the namespace id
+   sh scripts/setup.sh kv          # prints the namespace id; paste it first
    npx wrangler secret put INDEX_PASSWORD
    sh scripts/setup.sh set-doc-password acme-deck 'their-password'
    ```
-   Paste the KV id into `wrangler.toml` under a `[[kv_namespaces]]` block with
-   `binding = "AUTH_KV"`. KV also backs rate limiting in every mode, so add it
-   even for `site` mode if you want the IP lockout.
+   The namespace must be in `wrangler.toml` before `set-doc-password` works. KV
+   also backs rate limiting in every mode, so add it even for `site` mode if you
+   want the IP lockout.
 
 5. To turn on Turnstile, create a widget, set `TURNSTILE_SITE_KEY` under
    `[vars]` in `wrangler.toml`, and set the secret:
@@ -109,21 +110,35 @@ hook, which already blocks a stale index before the push leaves your machine.
    git push
    ```
 
-## Adding a doc
+## Adding a doc (any stack)
 
 `public/index.html` is generated. Never hand-edit it.
 
-1. Create `public/<slug>/index.html`.
-2. Add `public/<slug>/_meta.json`:
-   ```json
-   { "title": "...", "desc": "...", "confidential": false, "tags": ["Doc"] }
-   ```
-   Tags must be in `scripts/tags.json`. Add a new one there first if needed.
-3. Rebuild and push:
-   ```bash
-   python3 scripts/build_index.py
-   git add -A && git commit -m "Add <slug>" && git push
-   ```
+The scaffolder takes whatever you have and sets up the folder:
+
+```bash
+sh scripts/add_doc.sh <slug> <source> ["Title"]
+```
+
+| Your stack | `<source>` | Result |
+|---|---|---|
+| HTML page or site | an `.html` file | served directly |
+| Markdown | a `.md` file | rendered in the browser by a bundled viewer (marked + DOMPurify) |
+| PDF | a `.pdf` file | wrapped in a full-page iframe |
+| Pre-built SPA / static export | a directory | the `dist`/`out` contents, served as-is |
+
+For a client-routed SPA (deep links resolve in JS), flip
+`not_found_handling = "single-page-application"` in `wrangler.toml`. The default
+`none` is right for plain docs and a per-doc gate, where an SPA fallback would
+leak the index.
+
+Then edit the generated `public/<slug>/_meta.json` (`title`, `desc`, `tags` from
+`scripts/tags.json`), rebuild, and push:
+
+```bash
+python3 scripts/build_index.py
+git add -A && git commit -m "Add <slug>" && git push
+```
 
 `pre-commit` regenerates and stages the index when a commit touches `public/`.
 `pre-push`, and the CI check on the Actions path, block a stale or off-vocab
@@ -131,12 +146,19 @@ index.
 
 ## Spin one up with Claude
 
-There is a skill for this. Tell Claude "spin up a new docs site" and it walks
-the auth choice, the secrets, the KV and Turnstile wiring, the repo, and the
-deploy. When it finishes it writes a second skill into your global Claude
-skills, bound to the site it just made. From then on "share this with the team"
-or "publish this to your domain" routes to that site and runs the whole
-add-a-doc flow for you.
+This repo ships two skills (in `.claude/skills/`), so Claude Code picks them up
+the moment you open the repo:
+
+- **From scratch, no repo yet:** tell Claude "spin up a new docs site". The
+  `new-docs-site` skill clones the template, walks the auth choice, the secrets,
+  the KV and Turnstile wiring, the repo, and the deploy.
+- **Already cloned and open in Claude:** the `docs-site` skill drives setup and
+  every add-a-doc from inside this checkout.
+
+Either way, the last step installs a third skill into your global Claude skills,
+bound to the site you just made. From then on "share this with the team" or
+"publish this to your domain" routes to that site and runs the whole add-a-doc
+flow for you.
 
 ## Branding the index
 
@@ -156,9 +178,13 @@ Edit `scripts/site.json` for the stamp, heading, sub-line, and footer. Edit
 src/auth-worker.ts        the gate (site / per-doc / none)
 public/                   your docs + the generated index.html
 scripts/build_index.py    index generator (git + _meta.json)
+scripts/add_doc.sh        scaffold a doc from HTML / Markdown / PDF / a dist dir
+scripts/md-viewer.html    client-side markdown viewer (used by add_doc.sh)
+scripts/setup.sh          secrets / KV / per-doc password helper
+scripts/make_site_skill.sh  writes the per-site "share-<slug>" Claude skill
 scripts/site.json         index branding
 scripts/tags.json         allowed tag vocabulary
-scripts/setup.sh          secrets / KV / per-doc password helper
+.claude/skills/           new-docs-site (builder) + docs-site (in-repo) skills
 .githooks/                index enforcement (install.sh once per clone)
 .github/workflows/        the GitHub Actions deploy path
 wrangler.toml             worker + assets + AUTH_MODE

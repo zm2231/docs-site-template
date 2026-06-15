@@ -1,73 +1,90 @@
 ---
 name: docs-site
 description: >
-  Publish a document to this Cloudflare Worker docs site and manage its access.
-  Use when the user wants to add, publish, or share a doc from this repo, set a
-  per-document password for a client, or change the access mode. The site serves
-  static assets from public/ behind a Worker that gates access (site login /
-  per-doc password / public). The index page is generated from git + _meta.json.
-compatibility: Requires wrangler auth, a CLOUDFLARE_API_TOKEN with Workers deploy scope, python3, and the repo's git hooks installed.
+  Set up, publish to, and manage THIS Cloudflare Worker docs site (you are inside
+  a docs-site-template checkout). Use when the user wants to do first-time setup
+  of this cloned site, add/publish a doc (HTML, Markdown, PDF, or a pre-built
+  SPA), set a per-document password for a client, or install the per-site "share"
+  skill. Deploy target is Cloudflare, never a VPS. The index page is generated
+  from git + _meta.json. To stand up a NEW site from scratch, use "new-docs-site".
+compatibility: Requires node/npm, python3, wrangler (npx), the gh CLI for repo creation, and a Cloudflare account.
 ---
 
-# docs-site publishing
+# Work with this docs site
 
-Static docs on Cloudflare. Push to `main` → GitHub Actions runs
-`build_index.py --check` then `wrangler deploy`.
+You are inside a clone of `docs-site-template`: a gated docs site on a single
+Cloudflare Worker. If it isn't set up yet, do First-time setup. Otherwise jump to
+Add a doc.
 
 ## Access models
 
-The site runs one `AUTH_MODE` (set in `wrangler.toml`):
+One `AUTH_MODE` (set in `wrangler.toml`):
 
-- **`site`**, one shared login gates everything. Secrets: `SITE_USER`,
+- **`site`** — one shared login gates everything. Secrets: `SITE_USER`,
   `SITE_PASS`, `SESSION_SECRET`.
-- **`per-doc`**, gated index (`INDEX_PASSWORD`) plus a per-document password in
-  KV. Each client unlocks only their path. Set a doc password with
-  `sh scripts/setup.sh set-doc-password <slug> '<password>'`.
-- **`none`**, Worker passthrough. Public, or gate upstream with Cloudflare
+- **`per-doc`** — gated index (`INDEX_PASSWORD`) plus a per-document password in
+  KV. Each client unlocks only their folder.
+- **`none`** — Worker passthrough. Public, or gate upstream with Cloudflare
   Access for SSO/email identity.
 
 All modes support Turnstile on the login and KV-backed IP rate limiting.
 
-## Add a doc
+## First-time setup (only if this clone isn't deployed yet)
 
-1. Create `public/<slug>/index.html` (HTML site, Markdown viewer, PDF in an
-   iframe, or a pre-built SPA's `dist/` contents).
-2. Add `public/<slug>/_meta.json`:
-   ```json
-   { "title": "...", "desc": "...", "confidential": false, "tags": ["Doc"] }
-   ```
-   Tags must exist in `scripts/tags.json`. Add a new tag there first if needed
-   (the pre-push gate rejects off-vocab tags).
-3. Rebuild and push:
+1. Fill `wrangler.toml`: `replace-worker-name` (a slug), `replace-cloudflare-account-id`
+   (`npx wrangler whoami`), the route `pattern` (the domain). Set `AUTH_MODE` and
+   `SITE_TITLE` under `[vars]`.
+2. `npm install` then `npx wrangler login`.
+3. `sh scripts/setup.sh secrets` (sets `SESSION_SECRET`), then the secrets for
+   your mode (`SITE_USER`/`SITE_PASS`, or `INDEX_PASSWORD` + `sh scripts/setup.sh kv`).
+4. `sh .githooks/install.sh`.
+5. Deploy: either push to a GitHub repo with the Actions workflow (set
+   `CLOUDFLARE_API_TOKEN` via `gh secret set CLOUDFLARE_API_TOKEN`, which prompts
+   so the token stays out of shell history), or connect the repo to Cloudflare
+   native Git (Workers Builds) in the dashboard. Both deploy on push. See README.
+6. **Install the per-site skill** so "share this" works going forward:
    ```bash
-   python3 scripts/build_index.py
-   git add -A && git commit -m "Add <slug>" && git push
+   sh scripts/make_site_skill.sh <slug> <domain> "$(git rev-parse --show-toplevel)" <auth-mode> "<deploy-desc>"
    ```
+   That writes `~/.claude/skills/share-<slug>/SKILL.md`.
+
+## Add a doc (any stack)
+
+Use the scaffolder; it handles whatever the user has:
+
+```bash
+sh scripts/add_doc.sh <slug> <source> ["Title"]
+```
+- `.html` file → served directly
+- `.md` file → rendered client-side by a bundled markdown viewer
+- `.pdf` → iframe wrapper
+- a directory → pre-built SPA / `dist`, served as-is (for client-routed SPAs set
+  `not_found_handling = "single-page-application"` in `wrangler.toml`)
+
+Then edit the generated `public/<slug>/_meta.json` (`title`, `desc`, `tags` from
+`scripts/tags.json`), rebuild, and push:
+
+```bash
+python3 scripts/build_index.py
+git add -A && git commit -m "Add <slug>" && git push
+```
 
 The index page is generated. Never hand-edit `public/index.html`.
 
-## Share a client doc with its own password (per-doc mode)
+## Give a client their own password (per-doc mode)
 
 ```bash
 sh scripts/setup.sh set-doc-password acme-deck 'client-password'
 ```
 
-Give the client `https://<domain>/acme-deck/` plus that password. They unlock
-only that path. Remove later with `rm-doc-password acme-deck`.
-
-Per-doc passwords are folder-scoped. A client deliverable must be a folder
-(`public/acme-deck/`). A root-level `.html` file is gated by the index password,
-not its own, so it can't be handed to a client on a separate password.
-
-## First-time setup
-
-See `README.md`. In short: replace the `replace-*` placeholders in
-`wrangler.toml`, `npm install`, `sh scripts/setup.sh secrets`, set the secrets
-for your mode, `sh .githooks/install.sh`, then push.
+Hand the client `https://<domain>/acme-deck/` plus that password. They unlock
+only that path. Per-doc passwords are folder-scoped: a client deliverable must
+be a folder. A root-level file is gated by the index password. Remove a password
+with `rm-doc-password acme-deck`.
 
 ## Verify after deploy
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/         # expect 200 or login
+curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/         # 200 or login
 curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/<slug>/  # gated path
 ```
