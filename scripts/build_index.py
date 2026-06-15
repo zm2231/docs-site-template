@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = "public"
@@ -54,9 +55,9 @@ def collect():
         if child.name in IGNORE or child.name.endswith("._meta.json"):
             continue
         if child.is_dir():
-            href, meta_path, gitpath, follow = f"{child.name}/", child / "_meta.json", child, False
+            href, meta_path, gitpath, follow = f"{quote(child.name)}/", child / "_meta.json", child, False
         elif child.suffix == ".html":
-            href, meta_path, gitpath, follow = child.name, base / f"{child.name}._meta.json", child, True
+            href, meta_path, gitpath, follow = quote(child.name), base / f"{child.name}._meta.json", child, True
         else:
             continue
         date, author = git_added(gitpath, follow)
