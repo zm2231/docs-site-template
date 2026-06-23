@@ -23,7 +23,9 @@ One `AUTH_MODE` (set in `wrangler.toml`):
 - **`site`** — one shared login gates everything. Secrets: `SITE_USER`,
   `SITE_PASS`, `SESSION_SECRET`.
 - **`per-doc`** — gated index (`INDEX_PASSWORD`) plus a per-document password in
-  KV. Each client unlocks only their folder.
+  KV. Each client unlocks only their folder; nothing is public.
+- **`mixed`** — same as `per-doc`, but a folder with no password is public.
+  A hub of open docs plus a few gated client folders, behind a locked index.
 - **`none`** — Worker passthrough. Public, or gate upstream with Cloudflare
   Access for SSO/email identity.
 

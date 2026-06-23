@@ -14,15 +14,15 @@ Usage:
 
   sh scripts/setup.sh secrets
       Interactively set the Wrangler secrets for the chosen AUTH_MODE:
-        site    -> SESSION_SECRET, SITE_USER, SITE_PASS
-        per-doc -> SESSION_SECRET, INDEX_PASSWORD
+        site          -> SESSION_SECRET, SITE_USER, SITE_PASS
+        per-doc/mixed -> SESSION_SECRET, INDEX_PASSWORD
       Turnstile (optional): TURNSTILE_SECRET_KEY
 
   sh scripts/setup.sh kv
       Create the AUTH_KV namespace and print the id to paste into wrangler.toml.
 
   sh scripts/setup.sh set-doc-password <slug> <password>
-      Store a per-document password in AUTH_KV (per-doc mode).
+      Store a per-document password in AUTH_KV (per-doc / mixed mode).
 
   sh scripts/setup.sh rm-doc-password <slug>
       Remove a per-document password from AUTH_KV.
@@ -46,7 +46,7 @@ case "$cmd" in
     echo "Generating SESSION_SECRET and setting it as a Wrangler secret..."
     gen_secret | npx wrangler secret put SESSION_SECRET
     echo ""
-    echo "AUTH_MODE 'site' uses SITE_USER + SITE_PASS. 'per-doc' uses INDEX_PASSWORD."
+    echo "AUTH_MODE 'site' uses SITE_USER + SITE_PASS. 'per-doc'/'mixed' use INDEX_PASSWORD."
     echo "Set whichever your wrangler.toml AUTH_MODE needs:"
     echo "  npx wrangler secret put SITE_USER"
     echo "  npx wrangler secret put SITE_PASS"

@@ -115,12 +115,13 @@ function gateForPath(pathname: string): string {
   return SLUG_RE.test(first) ? first : "_index";
 }
 
-async function passwordForGate(gate: string, env: Env): Promise<string | null> {
+async function passwordForGate(gate: string, env: Env, mode: string): Promise<string | null> {
   if (gate === "_index") return env.INDEX_PASSWORD ?? null;
   if (env.AUTH_KV) {
     const kv = await env.AUTH_KV.get(`pw:${gate}`);
     if (kv) return kv;
   }
+  if (mode === "mixed") return null;
   return env.INDEX_PASSWORD ?? null;
 }
 
@@ -196,7 +197,7 @@ function loginPage(opts: {
          <input id="u" name="user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>`
       : "";
   const scopeNote =
-    opts.mode === "per-doc" && opts.gate !== "_index"
+    opts.mode !== "site" && opts.gate !== "_index"
       ? `<p class="foot">Document: <b>${escapeHtml(opts.gate)}</b></p>`
       : "";
 
@@ -263,7 +264,7 @@ export default {
     const mode = env.AUTH_MODE ?? "site";
     const title = env.SITE_TITLE ?? "Protected documents";
 
-    if (mode !== "none" && mode !== "site" && mode !== "per-doc") {
+    if (mode !== "none" && mode !== "site" && mode !== "per-doc" && mode !== "mixed") {
       return new Response(`Auth not configured: unknown AUTH_MODE "${mode}".`, { status: 503 });
     }
 
@@ -282,7 +283,7 @@ export default {
     if (mode === "site" && (!env.SITE_USER || !env.SITE_PASS)) {
       return new Response("Auth not configured: set SITE_USER and SITE_PASS.", { status: 503 });
     }
-    if (mode === "per-doc" && !env.INDEX_PASSWORD) {
+    if ((mode === "per-doc" || mode === "mixed") && !env.INDEX_PASSWORD) {
       return new Response("Auth not configured: set INDEX_PASSWORD.", { status: 503 });
     }
 
@@ -292,7 +293,7 @@ export default {
     const kv = env.AUTH_KV;
 
     if (url.pathname === "/__auth/logout") {
-      const gate = mode === "per-doc" ? gateForPath(safeRedirect(url.searchParams.get("r") ?? "/")) : "site";
+      const gate = mode === "site" ? "site" : gateForPath(safeRedirect(url.searchParams.get("r") ?? "/"));
       const name = cookieName(gate);
       const clear = `${name}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
       return new Response(null, { status: 303, headers: { location: "/", "set-cookie": clear } });
@@ -322,7 +323,7 @@ export default {
         credsOk =
           safeEqual(submittedUser, env.SITE_USER ?? "") && safeEqual(submittedPass, env.SITE_PASS ?? "");
       } else {
-        const expected = await passwordForGate(gate, env);
+        const expected = await passwordForGate(gate, env, mode);
         credsOk = expected != null && safeEqual(submittedPass, expected);
       }
 
@@ -371,6 +372,9 @@ export default {
     }
 
     const gate = mode === "site" ? "site" : gateForPath(url.pathname);
+    if (mode === "mixed" && gate !== "_index" && (await passwordForGate(gate, env, mode)) === null) {
+      return securityHeaders(await env.ASSETS.fetch(request));
+    }
     const token = getCookie(request, cookieName(gate));
     if (token && (await verifyToken(token, gate, sessionSecret))) {
       return gatedResponse(await env.ASSETS.fetch(request));

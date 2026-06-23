@@ -28,7 +28,10 @@ Ask the user (don't guess what isn't given):
    account.
 3. **Auth mode**:
    - `site` — one shared login for a single trust boundary.
-   - `per-doc` — gated index plus a separate password per client folder.
+   - `per-doc` — gated index plus a separate password per client folder; no
+     folder is public (an unset folder falls back to the index password).
+   - `mixed` — gated index plus per-client folder passwords, but folders with no
+     password are public. A hub of open docs with a few gated client folders.
    - `none` — public, or gated upstream by Cloudflare Access (SSO/identity).
 4. **Deploy path** (both are Cloudflare; pick one, never a VPS). Default to the
    first unless the user asks for CI:
@@ -49,6 +52,7 @@ hand the user the exact dashboard path; there is no `wrangler`/API command for i
 |---|---|---|---|
 | `AUTH_MODE = site` | `SITE_USER`, `SITE_PASS`, `SESSION_SECRET` | `wrangler secret put` | no |
 | `AUTH_MODE = per-doc` | `INDEX_PASSWORD`; **add** a `[[kv_namespaces]]` block; `pw:<slug>` per client | `wrangler.toml` + `setup.sh` | no |
+| `AUTH_MODE = mixed` | same as `per-doc` (`INDEX_PASSWORD` + `[[kv_namespaces]]` + `pw:<slug>`); folders without a `pw:<slug>` stay public | `wrangler.toml` + `setup.sh` | no |
 | `AUTH_MODE = none` | nothing to gate (public). For SSO, add a Cloudflare Access app | Zero Trust dashboard | yes (Access only) |
 | Turnstile on | `TURNSTILE_SITE_KEY` in `[vars]`, `TURNSTILE_SECRET_KEY` secret | `wrangler.toml` + dashboard | yes (create the widget) |
 | Deploy = CF native (default) | connect repo → Worker (root `/`, build `npm ci`, deploy `npx wrangler deploy`, watch `*`) | CF dashboard | **yes — dashboard-only, no CLI** |
@@ -90,7 +94,8 @@ npx wrangler login        # browser OAuth; no token to handle for manual deploys
 - `none` mode: no secrets to gate. If the user wants SSO (not a shared password),
   that's a Cloudflare Access app on the hostname, set up in the Zero Trust
   dashboard (manual). Otherwise `none` is just public.
-- `per-doc` mode:
+- `per-doc` or `mixed` mode (identical setup; the only difference is whether an
+  unset folder is gated by the index password (`per-doc`) or public (`mixed`)):
   1. `sh scripts/setup.sh kv` prints a namespace id.
   2. The default `wrangler.toml` has NO kv block, so **add** one (it isn't there
      to paste under):
@@ -100,8 +105,9 @@ npx wrangler login        # browser OAuth; no token to handle for manual deploys
      id = "<the-id-from-step-1>"
      ```
   3. `npx wrangler secret put INDEX_PASSWORD` (gates the index).
-  4. One `sh scripts/setup.sh set-doc-password <slug> '<pw>'` per client folder
-     (needs the kv block in place first).
+  4. One `sh scripts/setup.sh set-doc-password <slug> '<pw>'` per gated client
+     folder (needs the kv block in place first). In `mixed`, folders you never
+     set a password for stay public.
   KV also backs the IP rate-limit in every mode, so add the same block for `site`
   or `none` if you want the lockout.
 - Optional Turnstile (a manual dashboard step): create a widget in the Cloudflare

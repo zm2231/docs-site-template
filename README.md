@@ -23,17 +23,23 @@ from live.
 
 ## Pick a lock: `AUTH_MODE`
 
-Three modes. You set one in `wrangler.toml`.
+Four modes. You set one in `wrangler.toml`.
 
 - **`site`**: one username and password gate every URL. This is the right call
   for a team with a single trust boundary.
 - **`per-doc`**: the index is locked, and each client folder carries its own
   password. Hand a client `/acme-deck/` plus a password and they unlock that
   folder and nothing else. They never see the index or the other clients' work.
+  A folder with no password set falls back to the index password, so nothing is
+  ever public.
+- **`mixed`**: like `per-doc` (locked index, per-client folder passwords) except
+  a folder with no password set is **public**. Use it for a hub that mixes open
+  docs with a few gated client folders. The index stays locked because it lists
+  every folder by name; public folders are reached by direct link.
 - **`none`**: the Worker waves everything through. Use it when the site is
   public, or when Cloudflare Access sits in front and handles identity for you.
 
-All three run the same machinery underneath: an HMAC-signed session cookie,
+All four run the same machinery underneath: an HMAC-signed session cookie,
 optional Cloudflare Turnstile on the login, and KV-backed rate limiting that
 locks an IP out after enough bad guesses. Passwords live in Wrangler secrets or
 in KV. They never land in the repo and never reach the browser.

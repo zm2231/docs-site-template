@@ -10,8 +10,12 @@ fresh clone has nothing to fail.
 
 - `site`, one shared login (`SITE_USER`/`SITE_PASS`) gates every URL.
 - `per-doc`, gated index (`INDEX_PASSWORD`) plus a per-document password in KV
-  (`pw:<slug>`); each client unlocks only their own path. Fails closed if
-  `INDEX_PASSWORD` is unset.
+  (`pw:<slug>`); each client unlocks only their own path. A folder with no
+  `pw:<slug>` falls back to `INDEX_PASSWORD`, so nothing is public. Fails closed
+  if `INDEX_PASSWORD` is unset.
+- `mixed`, same as `per-doc` but a folder with no `pw:<slug>` is served public.
+  A hub of open docs plus a few gated client folders, with a locked index. Also
+  requires `INDEX_PASSWORD`.
 - `none`, Worker passthrough; gate upstream with Cloudflare Access, or leave
   public.
 
