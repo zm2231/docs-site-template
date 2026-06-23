@@ -22,6 +22,11 @@ fresh clone has nothing to fail.
 All modes share an HMAC session cookie, optional Turnstile, and KV rate limiting.
 Secrets live in Wrangler or KV, never in the repo. See `README.md` for setup.
 
+Custom login per gate: put HTML in KV `login:<gate>` (or `login:_index`) and the worker
+serves it instead of the default login for that gate. Use placeholders `{{REDIRECT}}`,
+`{{GATE}}`, `{{ERROR}}`, `{{TURNSTILE}}`; the form must POST `pass`/`redirect`/`gate` to
+`/__auth/login`. Falls back to the default login when no record exists.
+
 ## Fresh clone, or after an update
 
 ```

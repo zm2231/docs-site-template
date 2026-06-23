@@ -258,6 +258,31 @@ function bannedPage(remaining: number): Response {
   });
 }
 
+async function renderLogin(
+  env: Env,
+  opts: { mode: string; title: string; gate: string; redirect: string; turnstileSiteKey?: string; error?: string }
+): Promise<Response> {
+  if (env.AUTH_KV) {
+    const custom = await env.AUTH_KV.get(`login:${opts.gate}`);
+    if (custom) {
+      const turnstile = opts.turnstileSiteKey
+        ? `<div class="cf-turnstile" data-sitekey="${escapeHtml(opts.turnstileSiteKey)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>`
+        : "";
+      const err = opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : "";
+      const html = custom
+        .split("{{REDIRECT}}").join(escapeHtml(opts.redirect))
+        .split("{{GATE}}").join(escapeHtml(opts.gate))
+        .split("{{ERROR}}").join(err)
+        .split("{{TURNSTILE}}").join(turnstile);
+      return new Response(html, {
+        status: opts.error ? 401 : 200,
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      });
+    }
+  }
+  return loginPage(opts);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -353,7 +378,7 @@ export default {
         : kv
           ? `Wrong credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left before this IP is blocked.`
           : "Wrong credentials.";
-      return loginPage({
+      return renderLogin(env, {
         mode,
         title,
         gate,
@@ -380,7 +405,7 @@ export default {
       return gatedResponse(await env.ASSETS.fetch(request));
     }
 
-    return loginPage({
+    return renderLogin(env, {
       mode,
       title,
       gate,
